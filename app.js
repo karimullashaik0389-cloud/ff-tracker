@@ -102,7 +102,7 @@
   /* ---------------- lock screen: pick who you are, then your own PIN ---------------- */
   var pin = '', lockUser = '', mode = 'login', loginPin = '', newPin1 = '';
   function drawDots() {
-    var box = $('#pin-dots'), len = Math.max(mode === 'login' ? 6 : 4, pin.length); box.innerHTML = '';
+    var box = $('#pin-dots'), len = Math.max(4, pin.length); box.innerHTML = '';
     for (var i = 0; i < len; i++) { var d = document.createElement('i'); if (i < pin.length) d.className = 'on'; box.appendChild(d); }
   }
   function pickStep(msg) {
