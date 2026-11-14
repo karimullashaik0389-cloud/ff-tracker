@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a0a0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="F&amp;F Tracker">
+<title>Frost &amp; Flame · Investment Tracker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="offline-bar" class="offline-bar" hidden>You're offline – figures need internet</div>
+
+<!-- LOCK SCREEN -->
+<section id="lock" class="lock" aria-label="Unlock">
+  <div class="lock-inner">
+    <img src="icons/icon-192.png" alt="" class="lock-logo" width="88" height="88">
+    <h1 class="brand">Frost <span class="amp">&amp;</span> Flame</h1>
+    <p class="lock-sub">Investment Tracker</p>
+    <div id="lock-users">
+      <p class="lock-ask">Who are you?</p>
+      <div class="user-picks">
+        <button type="button" class="user-pick" data-user="Karimulla"><span class="up-av tk">K</span><span>Karimulla</span></button>
+        <button type="button" class="user-pick" data-user="Thanmayee"><span class="up-av tk">T</span><span>Thanmayee</span></button>
+        <button type="button" class="user-pick" data-user="Gopi"><span class="up-av gopi">G</span><span>Gopi</span></button>
+      </div>
+      <p class="lock-msg" id="users-msg" role="alert"></p>
+    </div>
+    <div id="lock-pin" hidden>
+      <p class="lock-ask" id="pin-ask">Hi</p>
+      <div class="pin-dots" id="pin-dots" aria-live="polite"></div>
+      <p class="lock-msg" id="lock-msg" role="alert"></p>
+    <div class="keypad" id="keypad">
+      <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+      <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+      <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+      <button type="button" data-k="del" aria-label="Delete" class="k-soft">⌫</button><button type="button" data-k="0">0</button>
+      <button type="button" data-k="ok" aria-label="Unlock" class="k-ok" id="k-ok">→</button>
+    </div>
+      <button type="button" class="link-btn not-you" id="not-you">Not you? Choose again</button>
+    </div>
+  </div>
+</section>
+
+<!-- APP SHELL -->
+<div id="app" class="app" hidden>
+  <header class="topbar">
+    <div class="topbar-title">
+      <img src="icons/icon-192.png" alt="" width="34" height="34">
+      <div><div class="brand-sm">Frost &amp; Flame</div><div class="topbar-sub" id="view-title">Dashboard</div></div>
+    </div>
+    <div class="topbar-actions">
+      <button type="button" class="icon-btn" id="btn-refresh" aria-label="Refresh">⟳</button>
+      <button type="button" class="icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
+    </div>
+  </header>
+
+  <main id="main" class="main">
+    <section class="view" id="view-home"></section>
+    <section class="view" id="view-spends" hidden></section>
+    <section class="view" id="view-people" hidden></section>
+    <section class="view" id="view-repay" hidden></section>
+    <section class="view" id="view-settings" hidden></section>
+  </main>
+
+  <nav class="tabbar" aria-label="Main">
+    <button type="button" data-view="home" class="tab active"><span class="ti">◆</span><span>Home</span></button>
+    <button type="button" data-view="spends" class="tab"><span class="ti">☰</span><span>Spends</span></button>
+    <button type="button" id="tab-add" class="tab tab-add" aria-label="Add spend"><span class="plus">+</span></button>
+    <button type="button" data-view="people" class="tab"><span class="ti">●●</span><span>People</span></button>
+    <button type="button" data-view="repay" class="tab"><span class="ti">↩</span><span>Repay</span></button>
+  </nav>
+</div>
+
+<!-- SHEETS / MODALS -->
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-backdrop" data-close></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-head">
+      <button type="button" class="link-btn" data-close>Cancel</button>
+      <h2 id="sheet-title">Add spend</h2>
+      <span class="sheet-head-pad"></span>
+    </div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+
+<div id="dialog" class="dialog" hidden>
+  <div class="dialog-card" role="alertdialog" aria-modal="true">
+    <h3 id="dialog-title"></h3>
+    <p id="dialog-text"></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-ghost" id="dialog-cancel">Cancel</button>
+      <button type="button" class="btn btn-danger" id="dialog-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="viewer" class="viewer" hidden>
+  <div class="viewer-top">
+    <button type="button" class="link-btn" id="viewer-close">Close</button>
+    <a id="viewer-open" class="link-btn" target="_blank" rel="noopener">Open in Drive</a>
+  </div>
+  <div class="viewer-body" id="viewer-body"></div>
+</div>
+
+<div id="busy" class="busy" hidden><div class="spinner"></div><div id="busy-text">Saving…</div></div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
