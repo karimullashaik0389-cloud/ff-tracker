@@ -8,8 +8,9 @@
   var STATUSES = ['Paid', 'Ordered / unpaid', 'Refund due'];
   var UNPAID = 'Ordered / unpaid', REFUND = 'Refund due';
 
-  var state = { spends: [], repayments: [], settings: { budgets: {} }, loaded: false,
-    view: 'home', person: POTS[0], filter: 'all', query: '' };
+  var state = { spends: [], repayments: [], settings: { budgets: {} }, loaded: false, tasksLoaded: false,
+    view: 'tasks', person: POTS[0], filter: 'all', query: '', taskTab: 'mine',
+    tasks: [], people: [], daysLeft: null, openingDate: '2026-11-26', todayTab: '', todayTabExists: false, tasksCached: false };
 
   /* ---------------- helpers ---------------- */
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -121,11 +122,12 @@
   }
   function showLock(msg) {
     pickStep(msg); $('#app').hidden = true; $('#lock').hidden = false; closeSheet();
-    state.spends = []; state.repayments = []; state.loaded = false; state.me = null; // forget data when locked
+    state.spends = []; state.repayments = []; state.loaded = false; state.tasksLoaded = false; state.me = null;
+    state.tasks = []; state.people = []; state.taskTab = 'mine'; FFApi.clearLocalData(); // forget data when locked
     $$('.view').forEach(function (v) { v.innerHTML = ''; });                         // and wipe it from the screen
   }
   function showApp() { $('#lock').hidden = true; $('#app').hidden = false; }
-  function enterApp() { pin = ''; loginPin = ''; newPin1 = ''; drawDots(); $('#lock-msg').textContent = ''; showApp(); go('home'); load(); }
+  function enterApp() { pin = ''; loginPin = ''; newPin1 = ''; drawDots(); $('#lock-msg').textContent = ''; state.taskTab = 'mine'; showApp(); go('tasks'); load(); }
   var lockTimer;
   function lockCountdown(sec) {
     var keys = $$('#keypad button'); keys.forEach(function (b) { b.disabled = true; });
@@ -182,29 +184,49 @@
   FFApi.onAuthLost(function (msg) { showLock(msg || 'Please unlock again'); });
 
   /* ---------------- data ---------------- */
+  function applyTasks(r) {
+    state.tasks = r.tasks || []; state.people = r.people || [];
+    state.daysLeft = r.daysLeft; state.openingDate = r.openingDate || '2026-11-26';
+    state.todayTab = r.todayTab || ''; state.todayTabExists = !!r.todayTabExists;
+    state.tasksCached = !!r.cached; state.tasksLoaded = true;
+    if (r.me) state.me = r.me;
+  }
   function load(silent) {
     if (!silent) renderSkeleton();
-    return FFApi.data().then(function (r) {
+    state.spendErr = null; state.taskErr = null;
+    var pData = FFApi.data().then(function (r) {
       state.spends = r.spends || []; state.repayments = r.repayments || []; state.settings = r.settings || { budgets: {} }; state.me = r.me || null;
-      state.loaded = true; render();
-    }, function (e) {
-      if (e.code === 'auth') return;
-      netState();
-      $('#view-' + state.view).innerHTML = '<div class="card empty"><b>Can\'t load right now</b>' + esc(e.message) +
-        '<div style="margin-top:14px"><button class="btn btn-ice" id="retry">Try again</button></div></div>';
-      $('#retry').onclick = function () { load(); };
-    });
+      state.loaded = true;
+    }, function (e) { if (e.code === 'auth') throw e; state.spendErr = e; });
+    var pTasks = FFApi.tasks().then(applyTasks, function (e) { if (e.code === 'auth') throw e; state.taskErr = e; });
+    return Promise.all([pData, pTasks]).then(function () {
+      if (state.view === 'tasks') {
+        if (state.tasksLoaded) render();
+        else showLoadError(state.taskErr || state.spendErr);
+      } else if (state.loaded) render();
+      else showLoadError(state.spendErr || state.taskErr);
+    }, function (e) { if (e && e.code === 'auth') return; });
+  }
+  function showLoadError(e) {
+    netState();
+    $('#view-' + state.view).innerHTML = '<div class="card empty"><b>Can\'t load right now</b>' + esc((e && e.message) || 'Something went wrong') +
+      '<div style="margin-top:14px"><button class="btn btn-ice" id="retry">Try again</button></div></div>';
+    if ($('#retry')) $('#retry').onclick = function () { load(); };
   }
   function renderSkeleton() { $('#view-' + state.view).innerHTML = '<div class="skeleton" style="height:170px"></div><div class="skeleton"></div><div class="skeleton"></div>'; }
 
   /* ---------------- navigation ---------------- */
-  var TITLES = { home: 'Dashboard', spends: 'All spends', people: 'People', repay: 'Repayments', settings: 'Settings' };
+  var TITLES = { tasks: 'My tasks', home: 'Dashboard', spends: 'All spends', people: 'People', repay: 'Repayments', settings: 'Settings' };
   function go(v) {
     state.view = v;
     $$('.view').forEach(function (s) { s.hidden = s.id !== 'view-' + v; });
     $$('.tab[data-view]').forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-view') === v); });
-    $('#view-title').textContent = TITLES[v]; window.scrollTo(0, 0);
-    if (state.loaded) render();
+    $('#view-title').textContent = v === 'tasks' ? (state.taskTab === 'team' ? 'Team' : 'My tasks') : TITLES[v]; window.scrollTo(0, 0);
+    if (v === 'tasks') {
+      if (state.tasksLoaded) render();
+      else if (state.taskErr) showLoadError(state.taskErr);
+    } else if (state.loaded) render();
+    else if (state.spendErr) showLoadError(state.spendErr);
   }
   $$('.tab[data-view]').forEach(function (t) { t.addEventListener('click', function () { go(t.getAttribute('data-view')); }); });
   $('#tab-add').addEventListener('click', function () { spendForm(null); });
@@ -212,7 +234,7 @@
   $('#btn-refresh').addEventListener('click', function () { load().then(function () { if (state.loaded) toast('Up to date'); }); });
 
   function render() {
-    ({ home: renderHome, spends: renderSpends, people: renderPeople, repay: renderRepay, settings: renderSettings })[state.view]();
+    ({ tasks: renderTasks, home: renderHome, spends: renderSpends, people: renderPeople, repay: renderRepay, settings: renderSettings })[state.view]();
   }
 
   /* ---------------- shared bits ---------------- */
@@ -286,6 +308,122 @@
         '<div class="cat-top muted" style="font-size:12px"><span>' + (ordered ? 'incl. ' + money(ordered) + ' ordered, not paid' : '') + '</span><span class="' + (left < 0 ? 'flame' : '') + '">' + (left < 0 ? money(-left) + ' over' : money(left) + ' left') + '</span></div></div>';
     }).join('');
     return '<div class="card"><div class="card-head"><h3>Budget vs actual</h3><button class="link-btn" data-go="settings">Edit</button></div>' + rows + '</div>';
+  }
+
+
+  /* ---------------- TASKS ---------------- */
+  function isMineTask(t) {
+    var o = String(t.owner || '').trim().toLowerCase();
+    var me = state.me && state.me.user ? state.me.user.toLowerCase() : '';
+    return o === me || o === 'all';
+  }
+  function sortTasks(list) {
+    return list.slice().sort(function (a, b) {
+      if (!!a.done !== !!b.done) return a.done ? 1 : -1;
+      if (!!a.carriedOver !== !!b.carriedOver) return a.carriedOver ? 1 : -1;
+      return 0;
+    });
+  }
+  function countdownCard() {
+    var n = state.daysLeft;
+    if (n == null) n = '';
+    var unit, label;
+    if (n === 0) { unit = 'Opening day'; label = 'Today, ' + niceOpen(state.openingDate); }
+    else { unit = n === 1 ? 'day to go' : 'days to go'; label = 'Opening ' + niceOpen(state.openingDate); }
+    return '<div class="card hero countdown"><div class="hero-label">Frost &amp; Flame opens</div>' +
+      '<div class="countdown-num" data-test="days-left">' + esc(String(n)) + '</div>' +
+      '<div class="countdown-unit">' + esc(unit) + '</div>' +
+      '<div class="note" style="margin:8px 0 0">' + esc(label) + '</div>' +
+      (state.tasksCached ? '<div class="task-pending">Showing the last list saved on this phone</div>' : '') +
+      '</div>';
+  }
+  function niceOpen(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    if (!m) return iso || '';
+    return 'Thu ' + Number(m[3]) + ' Nov ' + m[1];
+  }
+  function taskRow(t) {
+    var meta = [t.category, t.dueLabel || (t.dueDate ? niceDate(t.dueDate) : ''), t.owner && !isMineTask(t) ? t.owner : ''].filter(Boolean).join(' · ');
+    var carry = t.carriedOver && t.carriedFrom
+      ? '<div class="task-carry" data-test="carried-from">Carried over from ' + esc(t.carriedFrom) + '</div>' : '';
+    var pending = t.pending ? '<div class="task-pending">Will update the list when you are online</div>' : '';
+    return '<li class="task-row' + (t.done ? ' done' : '') + '" data-task-id="' + esc(t.id) + '">' +
+      '<button type="button" class="task-tick" role="checkbox" aria-checked="' + (t.done ? 'true' : 'false') +
+      '" data-test="task-tick" data-tick="' + esc(t.id) + '" aria-label="' + esc((t.done ? 'Mark not done: ' : 'Mark done: ') + t.task) + '">' +
+      (t.done ? '✓' : '') + '</button>' +
+      '<div class="task-body"><div class="task-title" data-test="task-title">' + esc(t.task) + '</div>' +
+      (meta ? '<div class="task-meta">' + esc(meta) + '</div>' : '') + carry + pending + '</div></li>';
+  }
+  function wireTicks(root) {
+    $$('[data-tick]', root).forEach(function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-tick');
+        var t = state.tasks.filter(function (x) { return x.id === id; })[0];
+        if (!t) return;
+        var want = !t.done;
+        t.done = want; t.status = want ? 'Done' : 'Not started';
+        renderTasks();
+        FFApi.setTaskDone(id, want, t.task).then(function (r) {
+          if (r.task) {
+            state.tasks = state.tasks.map(function (x) { return x.id === id ? Object.assign({}, x, r.task, { pending: !!r.queued }) : x; });
+          }
+          if (r.queued) toast('Saved on this phone – will update the list when you are online');
+          // refresh people counts
+          if (state.people) {
+            state.people = state.people.map(function (p) {
+              var list = state.tasks.filter(function (x) {
+                return String(x.owner || '').trim().toLowerCase() === String(p.user || '').trim().toLowerCase();
+              });
+              return Object.assign({}, p, { total: list.length, done: list.filter(function (x) { return x.done; }).length });
+            });
+          }
+          if (state.view === 'tasks') renderTasks();
+        }, function (e) {
+          t.done = !want; t.status = t.done ? 'Done' : 'Not started';
+          fail(e);
+          if (state.view === 'tasks') renderTasks();
+        });
+      };
+    });
+  }
+  function renderTasks() {
+    var el = $('#view-tasks');
+    if (!state.tasksLoaded) {
+      el.innerHTML = '<div class="skeleton" style="height:170px"></div><div class="skeleton"></div>';
+      return;
+    }
+    var mine = sortTasks(state.tasks.filter(isMineTask));
+    var mineDone = mine.filter(function (t) { return t.done; }).length;
+    var html = countdownCard();
+    html += '<div class="seg" id="tasks-seg">' +
+      '<button type="button" data-tt="mine" class="' + (state.taskTab === 'mine' ? 'on' : '') + '">My tasks</button>' +
+      '<button type="button" data-tt="team" class="' + (state.taskTab === 'team' ? 'on' : '') + '">Team</button></div>';
+    if (state.taskTab === 'team') {
+      html += (state.people || []).map(function (p) {
+        var pct = p.total ? Math.round(p.done / p.total * 100) : 0;
+        var barCls = p.user === 'Gopi' ? 'fl' : '';
+        return '<div class="card person-prog" data-test="progress-' + esc(p.user) + '">' +
+          '<div class="person-prog-top"><span>' + esc(p.user) + '</span><b>' + p.done + '/' + p.total + '</b></div>' +
+          '<div class="bar ' + barCls + '"><i style="width:' + pct + '%"></i></div></div>';
+      }).join('');
+      var all = sortTasks(state.tasks);
+      html += '<div class="card"><div class="card-head"><h3>Everyone today</h3><span class="muted">' +
+        all.filter(function (t) { return t.done; }).length + '/' + all.length + '</span></div>';
+      html += all.length ? '<ul class="task-list">' + all.map(taskRow).join('') + '</ul>' : '<div class="empty">No tasks today</div>';
+      html += '</div>';
+    } else {
+      html += '<div class="card"><div class="card-head"><h3>My tasks today</h3><span class="muted" data-test="my-count">' +
+        mineDone + '/' + mine.length + '</span></div>';
+      html += mine.length ? '<ul class="task-list" data-test="my-tasks">' + mine.map(taskRow).join('') + '</ul>'
+        : '<div class="empty"><b>Nothing for you today</b>Enjoy the quiet, or check the team list.</div>';
+      html += '</div>';
+    }
+    el.innerHTML = html;
+    $('#view-title').textContent = state.taskTab === 'team' ? 'Team' : 'My tasks';
+    $$('#tasks-seg button', el).forEach(function (b) {
+      b.onclick = function () { state.taskTab = b.getAttribute('data-tt'); renderTasks(); };
+    });
+    wireTicks(el);
   }
 
   /* ---------------- HOME ---------------- */
@@ -429,8 +567,9 @@
       '<div class="field"><label for="pin-old">Current PIN</label><input class="input" id="pin-old" type="password" inputmode="numeric" maxlength="8"></div>' +
       '<div class="field"><label for="pin-new">New PIN (4–8 digits)</label><input class="input" id="pin-new" type="password" inputmode="numeric" maxlength="8"></div>' +
       '<div class="err" id="pin-err"></div><button class="btn" type="submit">Change PIN</button></form></div>' +
+      (state.me && state.me.isAdmin ? '<div class="card" id="owner-admin"><h3>Change a task owner</h3><p class="note" style="margin-top:-4px">Only you can do this. It is kept out of the main task screens.</p><div id="owner-list"></div></div>' : '') +
       '<div class="card"><h3>This phone</h3><p class="note" style="margin-top:-4px">Locking signs this phone out. Your data stays in the Google Sheet.</p><button class="btn" id="btn-lock">Lock / switch person</button></div>' +
-      '<p class="note">Data lives in the “Frost &amp; Flame – Investment Tracker” Google Sheet. Bills go to the Bills folder in Google Drive. Nothing is stored on this phone except the unlock key.</p>';
+      '<p class="note">Daily tasks come from the Opening Checklist Google Sheet. Money lives in the Investment Tracker Sheet. Bills go to the Bills folder in Google Drive. Nothing is stored on this phone except the unlock key and, when you are offline, your last task list.</p>';
     $('#bud-form').addEventListener('submit', function (ev) {
       ev.preventDefault(); var out = {};
       $$('[data-k]', $('#bud-form')).forEach(function (i) { var v = parseAmount(i.value); if (v > 0) out[i.getAttribute('data-k')] = v; });
@@ -444,6 +583,26 @@
         function (e) { busy(false); $('#pin-err').textContent = e.message; });
     });
     $('#btn-lock').onclick = function () { FFApi.logout(); showLock('Locked'); };
+    if (state.me && state.me.isAdmin && $('#owner-list')) {
+      var open = state.tasks.filter(function (t) { return !t.done; });
+      if (!open.length) $('#owner-list').innerHTML = '<p class="note">No open tasks to reassign.</p>';
+      else $('#owner-list').innerHTML = open.map(function (t) {
+        var opts = ['Karimulla', 'Thanmayee', 'Gopi', 'All'].map(function (u) {
+          return '<option' + (u === t.owner ? ' selected' : '') + '>' + esc(u) + '</option>';
+        }).join('');
+        return '<div class="field"><label>' + esc(t.task) + '</label><select class="input" data-owner-id="' + esc(t.id) + '">' + opts + '</select></div>';
+      }).join('');
+      $$('[data-owner-id]', el).forEach(function (sel) {
+        sel.onchange = function () {
+          var id = sel.getAttribute('data-owner-id'), owner = sel.value;
+          busy(true, 'Saving…');
+          FFApi.setTaskOwner(id, owner).then(function (r) {
+            state.tasks = state.tasks.map(function (x) { return x.id === id ? Object.assign({}, x, r.task) : x; });
+            busy(false); toast('Owner changed to ' + owner);
+          }, fail);
+        };
+      });
+    }
   }
 
   /* ---------------- spend detail ---------------- */
@@ -606,13 +765,13 @@
 
   /* ---------------- online / offline ---------------- */
   function netState() { $('#offline-bar').hidden = navigator.onLine; document.body.classList.toggle('is-offline', !navigator.onLine); }
-  window.addEventListener('online', function () { netState(); if (!$('#app').hidden) load(true); });
+  window.addEventListener('online', function () { netState(); if (!$('#app').hidden) FFApi.flushTicks().catch(function () {}).then(function () { return load(true); }); });
   window.addEventListener('offline', netState);
   netState();
 
   /* ---------------- start ---------------- */
   drawDots(); state.me = null;
-  if (FFApi.hasToken()) { showApp(); go('home'); load(); } else showLock();
+  if (FFApi.hasToken()) { showApp(); go('tasks'); load(); } else showLock();
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }

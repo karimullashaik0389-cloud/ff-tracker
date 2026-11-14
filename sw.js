@@ -1,6 +1,6 @@
 /* Service worker: caches the APP SHELL ONLY (HTML, CSS, JS, fonts, icons).
  * It never touches API calls, POST requests, bills or anything cross-origin – data is always live. */
-var VERSION = 'ff-tracker-shell-v2';
+var VERSION = 'ff-tracker-shell-v3';
 var SHELL = [
   './', 'index.html', 'styles.css', 'config.js', 'api.js', 'app.js', 'manifest.webmanifest',
   'fonts/inter.woff2', 'fonts/cormorant.woff2',
