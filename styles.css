@@ -59,11 +59,11 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; letter-spac
 .offline-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 90; text-align: center; font-size: 13px; font-weight: 600;
   padding: calc(4px + var(--safe-t)) 8px 4px; background: var(--warn); color: #1a1200; }
 
-.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: 1fr 1fr 1fr 72px 1fr 1fr;
-  align-items: center; padding: 6px 4px calc(6px + var(--safe-b)); background: rgba(14,14,17,.94);
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1fr);
+  align-items: center; padding: 6px 6px calc(6px + var(--safe-b)); background: rgba(14,14,17,.94);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
 .tab { height: 58px; border: 0; background: none; color: var(--muted); display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 3px; font-size: 10px; font-weight: 600; letter-spacing: .02em; }
+  justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
 .tab .ti { font-size: 17px; line-height: 1; }
 .tab.active { color: var(--ice); }
 .tab-add { position: relative; }
@@ -233,28 +233,3 @@ body.is-offline .lock { padding-top: calc(50px + var(--safe-t)); }
 .who { font-size: 13px; color: var(--muted); }
 .perm-note { font-size: 13px; color: var(--muted); text-align: center; margin-top: 10px; }
 .toast { pointer-events: none; }
-
-/* ---------- Daily Tasks ---------- */
-.countdown { text-align: center; }
-.countdown-num { font-family: var(--serif); font-size: 72px; font-weight: 600; line-height: 1; margin: 2px 0 4px; }
-.countdown-unit { font-size: 18px; color: var(--ice-soft); letter-spacing: .08em; text-transform: uppercase; }
-.task-list { margin: 0; padding: 0; list-style: none; }
-.task-row { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--line); }
-.task-row:first-child { border-top: 0; }
-.task-row.done .task-title { color: var(--muted); text-decoration: line-through; }
-.task-tick { flex: none; width: 64px; height: 64px; border-radius: 18px; border: 2px solid var(--ice);
-  background: var(--panel2); display: flex; align-items: center; justify-content: center; padding: 0;
-  color: transparent; font-size: 32px; font-weight: 700; line-height: 1; }
-.task-tick[aria-checked="true"] { background: var(--ok); border-color: var(--ok); color: #042015; }
-.task-tick:disabled { opacity: .5; }
-.task-body { flex: 1; min-width: 0; padding-top: 6px; }
-.task-title { font-size: 19px; font-weight: 700; line-height: 1.3; }
-.task-meta { font-size: 14px; color: var(--muted); margin-top: 4px; }
-.task-carry { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--flame-soft);
-  background: var(--flame-dim); padding: 4px 10px; border-radius: 999px; }
-.person-prog { margin-bottom: 16px; }
-.person-prog-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 700; }
-.person-prog .bar { height: 12px; margin: 8px 0 0; }
-.task-pending { font-size: 13px; color: var(--warn); margin-top: 4px; }
-.seg.three { grid-template-columns: 1fr 1fr; }
-#view-tasks .hero-amount { font-size: 64px; }

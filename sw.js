@@ -1,6 +1,6 @@
 /* Service worker: caches the APP SHELL ONLY (HTML, CSS, JS, fonts, icons).
  * It never touches API calls, POST requests, bills or anything cross-origin – data is always live. */
-var VERSION = 'ff-tracker-shell-v3';
+var VERSION = 'ff-tracker-shell-v4';
 var SHELL = [
   './', 'index.html', 'styles.css', 'config.js', 'api.js', 'app.js', 'manifest.webmanifest',
   'fonts/inter.woff2', 'fonts/cormorant.woff2',
@@ -13,7 +13,7 @@ self.addEventListener('install', function (e) {
 
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
-    return Promise.all(keys.filter(function (k) { return k !== VERSION; }).map(function (k) { return caches.delete(k); }));
+    return Promise.all(keys.filter(function (k) { return k.indexOf('ff-tracker-shell-') === 0 && k !== VERSION; }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
 

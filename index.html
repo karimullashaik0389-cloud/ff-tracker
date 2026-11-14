@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="F&amp;F Tracker">
-<title>Frost &amp; Flame · Daily Tasks</title>
+<title>Frost &amp; Flame · Investment Tracker</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -18,14 +18,14 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="offline-bar" class="offline-bar" hidden>You're offline – ticks save when you're back online</div>
+<div id="offline-bar" class="offline-bar" hidden>You're offline – figures need internet</div>
 
 <!-- LOCK SCREEN -->
 <section id="lock" class="lock" aria-label="Unlock">
   <div class="lock-inner">
     <img src="icons/icon-192.png" alt="" class="lock-logo" width="88" height="88">
     <h1 class="brand">Frost <span class="amp">&amp;</span> Flame</h1>
-    <p class="lock-sub">Daily Tasks &amp; Tracker</p>
+    <p class="lock-sub">Investment Tracker</p>
     <div id="lock-users">
       <p class="lock-ask">Who are you?</p>
       <div class="user-picks">
@@ -56,7 +56,7 @@
   <header class="topbar">
     <div class="topbar-title">
       <img src="icons/icon-192.png" alt="" width="34" height="34">
-      <div><div class="brand-sm">Frost &amp; Flame</div><div class="topbar-sub" id="view-title">My tasks</div></div>
+      <div><div class="brand-sm">Frost &amp; Flame</div><div class="topbar-sub" id="view-title">Dashboard</div></div>
     </div>
     <div class="topbar-actions">
       <button type="button" class="icon-btn" id="btn-refresh" aria-label="Refresh">⟳</button>
@@ -65,8 +65,7 @@
   </header>
 
   <main id="main" class="main">
-    <section class="view" id="view-tasks"></section>
-    <section class="view" id="view-home" hidden></section>
+    <section class="view" id="view-home"></section>
     <section class="view" id="view-spends" hidden></section>
     <section class="view" id="view-people" hidden></section>
     <section class="view" id="view-repay" hidden></section>
@@ -74,8 +73,7 @@
   </main>
 
   <nav class="tabbar" aria-label="Main">
-    <button type="button" data-view="tasks" class="tab active"><span class="ti">✓</span><span>Tasks</span></button>
-    <button type="button" data-view="home" class="tab"><span class="ti">◆</span><span>Home</span></button>
+    <button type="button" data-view="home" class="tab active"><span class="ti">◆</span><span>Home</span></button>
     <button type="button" data-view="spends" class="tab"><span class="ti">☰</span><span>Spends</span></button>
     <button type="button" id="tab-add" class="tab tab-add" aria-label="Add spend"><span class="plus">+</span></button>
     <button type="button" data-view="people" class="tab"><span class="ti">●●</span><span>People</span></button>
